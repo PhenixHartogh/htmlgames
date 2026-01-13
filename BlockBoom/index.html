@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Block Boom</title>
+<style>
+  body {
+    font-family: 'Courier New', monospace;
+    background: #222;
+    color: #0f0;
+    text-align: center;
+    margin: 0; padding: 20px;
+    user-select: none;
+  }
+  canvas {
+    border: 3px solid #0f0;
+    background: #111;
+    display: block;
+    margin: 20px auto;
+  }
+  #scoreboard {
+    font-size: 1.2em;
+    margin-top: 10px;
+  }
+  #level-select {
+    margin-top: 10px;
+  }
+  button {
+    background: #0f0;
+    border: none;
+    color: #111;
+    font-weight: bold;
+    padding: 5px 15px;
+    cursor: pointer;
+    margin: 0 5px;
+  }
+  button:hover {
+    background: #0c0;
+  }
+</style>
+</head>
+<body>
+
+<h1>Block Boom</h1>
+
+<div id="scoreboard">Score: 0</div>
+
+<div id="level-select">
+  <button data-level="easy">Easy</button>
+  <button data-level="medium">Medium</button>
+  <button data-level="hard">Hard</button>
+  <button data-level="impossible">Impossible</button>
+</div>
+
+<canvas id="game" width="320" height="320"></canvas>
+
+<audio id="blast-sound" src="blast.wav" preload="auto"></audio>
+<audio id="error-sound" src="error.wav" preload="auto"></audio>
+
+<script>
+(() => {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+
+  const scoreboard = document.getElementById('scoreboard');
+  const levelButtons = document.querySelectorAll('#level-select button');
+  const blastSound = document.getElementById('blast-sound');
+  const errorSound = document.getElementById('error-sound');
+
+  const levels = {
+    easy:     { rows: 8, cols: 8, colors: ['red', 'green', 'blue', 'yellow'], minGroup: 2 },
+    medium:   { rows: 10, cols: 10, colors: ['red', 'green', 'blue', 'yellow', 'purple'], minGroup: 3 },
+    hard:     { rows: 12, cols: 12, colors: ['red', 'green', 'blue', 'yellow', 'purple', 'orange'], minGroup: 4 },
+    impossible: { rows: 14, cols: 14, colors: ['red', 'green', 'blue', 'yellow', 'purple', 'orange', 'cyan'], minGroup: 5 }
+  };
+
+  let currentLevel = 'easy';
+  let grid = [];
+  let score = 0;
+  let ROWS, COLS, COLORS, MIN_GROUP;
+  const BLOCK_SIZE = 30;
+
+  function init(levelName) {
+    currentLevel = levelName;
+    const level = levels[levelName];
+    ROWS = level.rows;
+    COLS = level.cols;
+    COLORS = level.colors;
+    MIN_GROUP = level.minGroup;
+
+    canvas.width = COLS * BLOCK_SIZE;
+    canvas.height = ROWS * BLOCK_SIZE;
+
+    score = 0;
+    grid = [];
+
+    for (let r = 0; r < ROWS; r++) {
+      grid[r] = [];
+      for (let c = 0; c < COLS; c++) {
+        grid[r][c] = COLORS[Math.floor(Math.random() * COLORS.length)];
+      }
+    }
+    updateScore();
+    drawGrid();
+  }
+
+  function updateScore() {
+    scoreboard.textContent = `Score: ${score}`;
+  }
+
+  function drawGrid() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const color = grid[r][c];
+        if (color) {
+          ctx.fillStyle = color;
+          ctx.fillRect(c * BLOCK_SIZE + 1, r * BLOCK_SIZE + 1, BLOCK_SIZE - 2, BLOCK_SIZE - 2);
+          ctx.strokeStyle = '#000';
+          ctx.strokeRect(c * BLOCK_SIZE + 1, r * BLOCK_SIZE + 1, BLOCK_SIZE - 2, BLOCK_SIZE - 2);
+        }
+      }
+    }
+  }
+
+  function findConnectedBlocks(r, c, color, visited) {
+    if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return [];
+    if (visited[r][c]) return [];
+    if (grid[r][c] !== color) return [];
+
+    visited[r][c] = true;
+    let connected = [[r, c]];
+
+    connected = connected.concat(findConnectedBlocks(r+1, c, color, visited));
+    connected = connected.concat(findConnectedBlocks(r-1, c, color, visited));
+    connected = connected.concat(findConnectedBlocks(r, c+1, color, visited));
+    connected = connected.concat(findConnectedBlocks(r, c-1, color, visited));
+
+    return connected;
+  }
+
+  function removeBlocks(blocks) {
+    for (const [r, c] of blocks) {
+      grid[r][c] = null;
+    }
+  }
+
+  function collapseGrid() {
+    for (let c = 0; c < COLS; c++) {
+      let pointer = ROWS - 1;
+      for (let r = ROWS - 1; r >= 0; r--) {
+        if (grid[r][c] !== null) {
+          grid[pointer][c] = grid[r][c];
+          if (pointer !== r) grid[r][c] = null;
+          pointer--;
+        }
+      }
+    }
+  }
+
+  canvas.addEventListener('click', e => {
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const c = Math.floor(x / BLOCK_SIZE);
+    const r = Math.floor(y / BLOCK_SIZE);
+
+    if (!grid[r] || grid[r][c] === null) {
+      errorSound.play();
+      return;
+    }
+
+    const visited = Array.from({length: ROWS}, () => Array(COLS).fill(false));
+    const connected = findConnectedBlocks(r, c, grid[r][c], visited);
+
+    if (connected.length < MIN_GROUP) {
+      errorSound.play();
+      return; // too small group to blast
+    }
+
+    removeBlocks(connected);
+    collapseGrid();
+
+    score += connected.length * 10 * (Object.keys(levels).indexOf(currentLevel) + 1);
+
+    updateScore();
+    drawGrid();
+    blastSound.play();
+  });
+
+  levelButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      init(btn.getAttribute('data-level'));
+    });
+  });
+
+  init(currentLevel);
+})();
+</script>
+
+</body>
+</html>
+
