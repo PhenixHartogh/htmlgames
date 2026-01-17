@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Fruit Crush</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                background: #fef6e4;
+                text-align: center;
+                margin: 0;
+                padding: 20px;
+            }
+            h1 {
+                color: #ff6f61;
+            }
+            #controls {
+                margin-top: 10px;
+            }
+            #levelDisplay, #scoreDisplay {
+                font-size: 18px;
+                margin-top: 10px;
+            }
+            button {
+                padding: 10px 20px;
+                font-size: 16px;
+                background-color: #ff6f61;
+                border: none;
+                color: white;
+                cursor: pointer;
+                margin: 10px;
+            }
+            button:hover {
+                background-color: #e85c50;
+            }
+            .fruit {
+                width: 40px;
+                height: 40px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Fruit Crush</h1>
+        <div id="levelDisplay">Level: 1</div>
+        <div id="scoreDisplay">Score: 0</div>
+        <canvas id="gameCanvas" width="320" height="320"></canvas>
+        <div id="controls">
+            <button onclick="nextLevel()">Next Level</button>
+            <button onclick="resetLevel()">Reset Level</button>
+        </div>
+
+        <audio id="matchSound" src="match.mp3"></audio>
+        <audio id="bombSound" src="bomb.mp3"></audio>
+
+        <script>
+            const canvas = document.getElementById("gameCanvas");
+            const ctx = canvas.getContext("2d");
+            const levelDisplay = document.getElementById("levelDisplay");
+            const scoreDisplay = document.getElementById("scoreDisplay");
+            const matchSound = document.getElementById("matchSound");
+            const bombSound = document.getElementById("bombSound");
+
+            const TILE_SIZE = 40;
+            const ROWS = 8;
+            const COLS = 8;
+            const fruitImages = [
+                'media/apple.png',
+                'media/orange.png',
+                'media/grape.png',
+                'media/cherry.png',
+                'media/peach.png',
+                'media/mango.png',
+            ]
+            let board = [];
+            let fruitAssets = [];
+            let level = 1;
+            let score = 0;
+
+            let dragStart = null;
+
+            function loadImages(callback) {
+                let loaded = 0;
+                for (let i = 0; i < fruitImages.length; i++) {
+                    const img = new Image();
+                    img.src = fruitImages[i];
+                    img.onload = () => {
+                        loaded++;
+                        if (loaded === fruitImages.length) {
+                            callback();
+                        }
+                    };
+                    fruitAssets.push(img);
+                }
+            }
+
+            function getDifficulty(level) {
+                if (level <= 33) return "easy";
+                if (level <= 66) return "medium";
+                if (level <= 99) return "hard";
+                return "impossible";
+            }
+
+            function generateBoard() {
+                board = [];
+                const difficulty = getDifficulty(level);
+                const fruitCount = {
+                    easy: 3,
+                    medium: 4,
+                    hard: 5,
+                    impossible: 6
+                }[difficulty];
+
+                for (let r = 0; r < ROWS; r++) {
+                    board[r] = [];
+                    for (let c = 0; c < COLS; c++) {
+                        board[r][c] = Math.floor(Math.random() * fruitCount);
+                    }
+                }
+            }
+
+            function drawBoard() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                for (let r = 0; c < COLS; c++) {
+                    for (let c = 0; c < COLS; c++) {
+                        const idx = board[r][c];
+                        if (fruitAssets[idx] !== undefined && idx !== -1) {
+                            ctx.drawImage(fruitAssets[idx], c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TIZE_SIZE);
+                        }
+                    }
+                }
+            }
+
+            function findMatches() {
+                let matched = [];
+                for (let r = 0; r < ROWS; r++) {
+                    for (let c = 0; c < COLS - 2; c++) {
+                        if (board[r][c] !== -1 && board[r][c] === board[r][c+1] && board[r][c] === board[r][c+2]) {
+                            matched.push([r, c], [r, c+1], [r, c+2]);
+                        }
+                    }
+                }
+                for (let c = 0; c < COLS; c++) {
+                    for (let r = 0; r < ROWS - 2; r++) {
+                        if (board[r][c] !== -1 && board[r][c] === board[r+1][c] && board[r+1][c] === board[r+2][c]) {
+                            matched.push([r, c], [r+1, c], [r+2, c]);
+                        }
+                    }
+                }
+                return matched;
+            }
+
+            
+        </script>
+    </body>
+</html>

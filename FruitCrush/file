@@ -1,0 +1,15 @@
+const TILE_SIZE = 40;
+const ROWS = 8;
+const COLS = 8;
+const fruitImages = [
+    'media/apple.png',
+    'media/orange.png',
+    'media/grape.png',
+    'media/cherry.png',
+    'media/peach.png',
+    'media/mango.png',
+];
+let board = [];
+let fruitAssets = [];
+let selected = null;
+let level = 1;
