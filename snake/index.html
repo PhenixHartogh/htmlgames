@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Snake</title>
+
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8050463644735537"
+     crossorigin="anonymous"></script>
+  <style>
+    body {
+      background-color: #222;
+      background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Nokia_3310_blue.jpg/800px-Nokia_3310_blue.jpg');
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center top;
+      font-family: 'Courier New', monospace;
+      color: #00ff00;
+      text-align: center;
+      margin-top: 0;
+    }
+
+    h1 {
+      margin-top: 20px;
+      color: #00ff00;
+      text-shadow: 0 0 5px #00ff00;
+    }
+
+    #nokia-border {
+      display: inline-block;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 10px;
+      border-radius: 20px;
+      border: 3px solid #00ff00;
+      margin-top: 240px; /* adjust to fit in Nokia screen */
+    }
+
+    #screen {
+      background-color: #001a00;
+      border: 3px solid #00ff00;
+      padding: 10px;
+      border-radius: 10px;
+    }
+
+    canvas {
+      display: block;
+      margin: auto;
+      image-rendering: pixelated;
+    }
+
+    #score {
+      color: #00ff00;
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+
+    #game-over {
+      display: none;
+      color: #00ff00;
+      font-size: 20px;
+      margin-top: 15px;
+    }
+
+    #restart-button {
+      background-color: #000;
+      color: #00ff00;
+      border: 2px solid #00ff00;
+      padding: 8px 16px;
+      font-family: 'Courier New', monospace;
+      cursor: pointer;
+      border-radius: 5px;
+      margin-top: 10px;
+    }
+
+    #restart-button:hover {
+      background-color: #00ff00;
+      color: #000;
+    }
+  </style>
+</head>
+<body>
+  <h1>📟 Snake</h1>
+
+  <div id="nokia-border">
+    <div id="screen">
+      <div id="score">SCORE: 0</div>
+      <canvas id="game" width="300" height="300"></canvas>
+      <div id="game-over">
+        <p>GAME OVER</p>
+        <button id="restart-button">Restart</button>
+      </div>
+    </div>
+  </div>
+
+  <audio id="beep" src="files/beep.ogg" preload="auto"></audio>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const scoreDisplay = document.getElementById("score");
+    const gameOverScreen = document.getElementById("game-over");
+    const restartButton = document.getElementById("restart-button");
+    const beepSound = document.getElementById("beep");
+
+    const gridSize = 15;
+    const tileCount = canvas.width / gridSize;
+
+    let snake, food, dx, dy, score, gameLoop;
+
+    function init() {
+      snake = [{ x: 10, y: 10 }];
+      food = { x: 5, y: 5 };
+      dx = 0;
+      dy = 0;
+      score = 0;
+      scoreDisplay.textContent = "SCORE: " + score;
+      gameOverScreen.style.display = "none";
+
+      clearInterval(gameLoop);
+      gameLoop = setInterval(draw, 150);
+    }
+
+    function draw() {
+      const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+      snake.unshift(head);
+
+      // Check for food
+      if (head.x === food.x && head.y === food.y) {
+        score++;
+        scoreDisplay.textContent = "SCORE: " + score;
+        food = {
+          x: Math.floor(Math.random() * tileCount),
+          y: Math.floor(Math.random() * tileCount)
+        };
+        beepSound.currentTime = 0;
+        beepSound.play();
+      } else {
+        snake.pop();
+      }
+
+      // Check collision
+      if (
+        head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount ||
+        snake.slice(1).some(s => s.x === head.x && s.y === head.y)
+      ) {
+        gameOver();
+        return;
+      }
+
+      // Draw game
+      ctx.fillStyle = "#001a00";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw snake
+      ctx.fillStyle = "#00ff00";
+      for (let s of snake) {
+        ctx.fillRect(s.x * gridSize, s.y * gridSize, gridSize - 1, gridSize - 1);
+      }
+
+      // Draw food
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize - 1, gridSize - 1);
+    }
+
+    function gameOver() {
+      clearInterval(gameLoop);
+      gameOverScreen.style.display = "block";
+    }
+
+    function keyDown(e) {
+      switch (e.key) {
+        case "ArrowUp": if (dy === 0) { dx = 0; dy = -1; } break;
+        case "ArrowDown": if (dy === 0) { dx = 0; dy = 1; } break;
+        case "ArrowLeft": if (dx === 0) { dx = -1; dy = 0; } break;
+        case "ArrowRight": if (dx === 0) { dx = 1; dy = 0; } break;
+      }
+    }
+
+    document.addEventListener("keydown", keyDown);
+    restartButton.addEventListener("click", init);
+
+    init();
+  </script>
+</body>
+</html>
